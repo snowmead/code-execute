@@ -17,7 +17,7 @@ import (
 // Bot parameters
 var (
 	GuildID  = flag.String("guild", "953488559724183602", "Test guild ID")
-	BotToken = flag.String("token", "OTU1ODM2MTA0NTU5NDYwMzYy.YjndvQ.Ywgrne6NkSVUXvX23y6giAHLt2c", "Bot access token")
+	BotToken = flag.String("token", "", "Bot access token")
 	AppID    = flag.String("app", "955836104559460362", "Application ID")
 )
 
