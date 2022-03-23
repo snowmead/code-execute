@@ -128,7 +128,7 @@ func sendMessageComplex(channelID string, messageReference *discordgo.MessageRef
 }
 
 func editComplexMessage(messageID string, channelID string, messageReference *discordgo.MessageReference, codeOutput string) {
-	content := fmt.Sprintf("Output:\n\n`%s`\n", string(codeOutput))
+	content := fmt.Sprintf("Output:\n`%s`\n", string(codeOutput))
 	s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 		ID:      messageID,
 		Channel: channelID,
