@@ -16,18 +16,22 @@ import (
 
 // Bot parameters
 var (
-	GuildID  = flag.String("guild", "", "Test guild ID")
-	BotToken = flag.String("token", "", "Bot access token")
-	AppID    = flag.String("app", "", "Application ID")
+	AppID    string = "955836104559460362"
+	botToken string
 )
 
 var s *discordgo.Session
 
-func init() { flag.Parse() }
+// set variables and flags
+func init() {
+	botToken = os.Getenv("BOT_TOKEN")
+	flag.Parse()
+}
 
+// create discord session
 func init() {
 	var err error
-	s, err = discordgo.New("Bot " + *BotToken)
+	s, err = discordgo.New("Bot " + botToken)
 	if err != nil {
 		log.Fatalf("Invalid bot parameters: %v", err)
 	}
@@ -118,7 +122,7 @@ func goExec(channelID string, messageContent string, messageReference *discordgo
 // "Run" button is injected in the message so the user may re run their code
 func sendMessageComplex(channelID string, codeOutput string, messageReference *discordgo.MessageReference) {
 	_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
-		Content:   fmt.Sprintf("Output:\n`%s`\n", string(codeOutput)),
+		Content:   fmt.Sprintf("Output:\n```\n%s\n```\n", string(codeOutput)),
 		Reference: messageReference,
 		Components: []discordgo.MessageComponent{
 			discordgo.ActionsRow{
@@ -135,7 +139,7 @@ func sendMessageComplex(channelID string, codeOutput string, messageReference *d
 }
 
 func editComplexMessage(messageID string, channelID string, codeOutput string, messageReference *discordgo.MessageReference) {
-	content := fmt.Sprintf("Output:\n`%s`\n", string(codeOutput))
+	content := fmt.Sprintf("Output:\n```\n%s\n```\n", string(codeOutput))
 	s.ChannelMessageEditComplex(&discordgo.MessageEdit{
 		ID:      messageID,
 		Channel: channelID,
