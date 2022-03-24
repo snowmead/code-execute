@@ -3,15 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
 	"regexp"
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	piston "github.com/milindmadhukar/go-piston"
 )
 
 // Bot parameters
@@ -64,7 +63,7 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 			fmt.Println("did not find any string matching")
 		} else if matched {
 			codeOuput := goExec(m.ChannelID, m.Content, m.Reference())
-			sendMessageComplex(m.ChannelID, string(codeOuput), m.Reference())
+			sendMessageComplex(m.ChannelID, codeOuput, m.Reference())
 			return
 		}
 	}
@@ -81,11 +80,11 @@ func reExec(s *discordgo.Session, m *discordgo.InteractionCreate) {
 
 		messageReference := m.Message.Reference()
 		codeOutput := goExec(m.ChannelID, msg.Content, messageReference)
-		editComplexMessage(m.Message.ID, m.ChannelID, string(codeOutput), messageReference)
+		editComplexMessage(m.Message.ID, m.ChannelID, codeOutput, messageReference)
 	}
 }
 
-func goExec(channelID string, messageContent string, messageReference *discordgo.MessageReference) []byte {
+func goExec(channelID string, messageContent string, messageReference *discordgo.MessageReference) string {
 	// add regex string replacements for content
 	var r []regexp.Regexp
 	blockre := regexp.MustCompile(".*```.*")
@@ -98,24 +97,22 @@ func goExec(channelID string, messageContent string, messageReference *discordgo
 		content = regex.ReplaceAllString(content, "")
 	}
 
-	// create go execution file
-	if err := os.MkdirAll("code", os.ModePerm); err != nil {
-		log.Fatal(err)
-	}
-	ioutil.WriteFile("code/code.go", []byte(content), 0644)
-
-	// run command
-	cmd := exec.Command("go", "run", "code/code.go")
-	o, err := cmd.Output()
-
-	// output error in discord if code did not successfully execute
+	client := piston.CreateDefaultClient()
+	output, err := client.Execute("go", "",
+		[]piston.Code{
+			{
+				Name:    fmt.Sprintf("%s-code.go", messageReference.MessageID),
+				Content: content,
+			},
+		},
+	)
 	if err != nil {
 		fmt.Println(err.Error())
 		_, _ = s.ChannelMessageSendReply(channelID, err.Error(), messageReference)
-		return nil
+		return ""
 	}
 
-	return o
+	return output.GetOutput()
 }
 
 // send initial reply message containing output of code execution

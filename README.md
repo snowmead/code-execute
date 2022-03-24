@@ -7,7 +7,7 @@ run```go
 package main
 import "fmt"
 func main() {
-  fmt.Printf("again lol\nededehdeihdiehbieibwciubcuwidc")
+  fmt.Printf("Hello world")
 }
 ```
 ````
