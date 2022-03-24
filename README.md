@@ -1,1 +1,23 @@
 # code-execute
+
+CodeExecute is a discord bot that enables developer collaboration through discord messages. It will allow developers to interactively execute code through discord messages while sharing and previewing the output of the code execution. Here is an example of a code block you can send in discord to achieve this:
+
+````
+run```go
+package main
+import "fmt"
+func main() {
+  fmt.Printf("again lol\nededehdeihdiehbieibwciubcuwidc")
+}
+```
+````
+
+It's important to note that the discord bot expects both keywords `run` and the specific programming language you wish to run within your code block `go`
+
+The discord bot will return a reply message with the output of the code and with a *Run* button that allows the user to execute their code as many times as they wish. This gives the user the possibility to modify their code and re-execute their code.
+
+![Alt Text](https://media.giphy.com/media/fUQj3S1Noe4efHAYxA/giphy.gif)
+
+## Limitations
+
+So far this bot is only able to execute `go` code. The initiative is to add as many languages as possible.
