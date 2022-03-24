@@ -18,6 +18,11 @@ The discord bot will return a reply message with the output of the code and with
 
 ![Alt Text](https://media.giphy.com/media/fUQj3S1Noe4efHAYxA/giphy.gif)
 
+## How to Run
+
+`make docker-build`
+`make helm-upgrade`
+
 ## Limitations
 
 So far this bot is only able to execute `go` code. The initiative is to add as many languages as possible.
