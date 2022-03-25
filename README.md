@@ -23,7 +23,3 @@ The discord bot will return a reply message with the output of the code and with
 - `make docker-build`
 - Replace secret value placeholder with [bottoken](https://github.com/michaelassaf/code-execute/blob/main/chart/templates/secret.yaml#L7)
 - `make helm-upgrade`
-
-## Limitations
-
-So far this bot is only able to execute `go` code. The initiative is to add as many languages as possible.
