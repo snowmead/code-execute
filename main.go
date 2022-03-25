@@ -25,6 +25,8 @@ var s *discordgo.Session
 // code execution ouptput
 var o chan string
 
+const of string = "Output:\n```\n%s\n```\n"
+
 // regex for parsing message to execute code
 const r string = "run```.*"
 
@@ -65,14 +67,13 @@ func main() {
 }
 
 func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	c := strings.Split(m.Content, "\n")
 	// check to see if we are executing go code
 	// this is based on a writing standard in discord for writing code in a paragraph message block
 	// example message: ```go ... ```
+	regx, _ := regexp.Compile(r)
+	c := strings.Split(m.Content, "\n")
 	for _, b := range c {
-		if matched, err := regexp.MatchString(r, b); err != nil {
-			fmt.Println("error matching string")
-		} else if matched {
+		if regx.MatchString(b) {
 			r, _ := regexp.Compile(r)
 			lang := strings.TrimPrefix(string(r.Find([]byte(b))), t)
 			go exec(m.ChannelID, m.Content, m.Reference(), lang)
@@ -83,39 +84,53 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 // handler for re-executing go code when the "Run" button is clicked
-func reExecuctionHandler(s *discordgo.Session, m *discordgo.InteractionCreate) {
+func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// check if go button was clicked
-	if m.MessageComponentData().CustomID == "run" {
-		msg, err := s.ChannelMessage(m.ChannelID, m.Message.MessageReference.MessageID)
+	if i.MessageComponentData().CustomID == "run" {
+		msg, err := s.ChannelMessage(i.ChannelID, i.Message.MessageReference.MessageID)
 		if err != nil {
 			log.Fatalf("Could not get message reference: %v", err)
 		}
-		messageReference := m.Message.Reference()
 
 		r, _ := regexp.Compile("run```.*")
 		lang := strings.TrimPrefix(string(r.Find([]byte(msg.Content))), t)
-		go exec(m.ChannelID, msg.Content, messageReference, lang)
-		editComplexMessage(m.Message.ID, m.ChannelID, messageReference)
+		go exec(i.ChannelID, msg.Content, i.Message.Reference(), lang)
+
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseUpdateMessage,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprintf(of, <-o),
+				Components: []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Run",
+								Style:    discordgo.SuccessButton,
+								CustomID: "run",
+							},
+						},
+					},
+				},
+			},
+		})
 	}
+
 }
 
 func exec(channelID string, messageContent string, messageReference *discordgo.MessageReference, lang string) {
-	// add regex string replacements for content
-	var r []regexp.Regexp
-	blockre := regexp.MustCompile(".*```.*")
-	whitespacere := regexp.MustCompile("\n\n")
-	r = append(r, *blockre, *whitespacere)
 	// remove strings based on regex for proper code execution
-	content := messageContent
-	for _, regex := range r {
-		content = regex.ReplaceAllString(content, "")
+	rs := []string{".*```.*", "\n\n"}
+	for _, r := range rs {
+		regex := regexp.MustCompile(r)
+		messageContent = regex.ReplaceAllString(messageContent, "")
 	}
 
+	// execute code using piston library
 	output, err := client.Execute(lang, "",
 		[]piston.Code{
 			{
 				Name:    fmt.Sprintf("%s-code", messageReference.MessageID),
-				Content: content,
+				Content: messageContent,
 			},
 		},
 	)
@@ -131,28 +146,8 @@ func exec(channelID string, messageContent string, messageReference *discordgo.M
 // "Run" button is injected in the message so the user may re run their code
 func sendMessageComplex(channelID string, messageReference *discordgo.MessageReference) {
 	_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
-		Content:   fmt.Sprintf("Output:\n```\n%s\n```\n", <-o),
+		Content:   fmt.Sprintf(of, <-o),
 		Reference: messageReference,
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						Label:    "Run",
-						Style:    discordgo.SuccessButton,
-						CustomID: "run",
-					},
-				},
-			},
-		},
-	})
-}
-
-func editComplexMessage(messageID string, channelID string, messageReference *discordgo.MessageReference) {
-	content := fmt.Sprintf("Output:\n```\n%s\n```\n", <-o)
-	s.ChannelMessageEditComplex(&discordgo.MessageEdit{
-		ID:      messageID,
-		Channel: channelID,
-		Content: &content,
 		Components: []discordgo.MessageComponent{
 			discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
