@@ -67,37 +67,33 @@ func main() {
 }
 
 func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-	// check to see if we are executing go code
-	// this is based on a writing standard in discord for writing code in a paragraph message block
-	// example message: ```go ... ```
-	regx, _ := regexp.Compile(r)
-	c := strings.Split(m.Content, "\n")
-	for _, b := range c {
-		if regx.MatchString(b) {
-			// execute code
-			lang := getLanguage(b)
-			go exec(m.ChannelID, m.Content, m.Reference(), lang)
+	// avoid handling the message that the bot creates when replying to a user
+	if m.Author.Bot {
+		return
+	}
 
-			// send initial reply message containing output of code execution
-			// "Run" button is injected in the message so the user may re run their code
-			_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-				Content:   fmt.Sprintf(of, <-o),
-				Reference: m.Reference(),
+	// extract code block from message and execute code
+	lang, codeBlock := codeBlockExtractor(m.Content)
+	go exec(m.ChannelID, codeBlock, m.Reference(), lang)
+
+	// send initial reply message containing output of code execution
+	// "Run" button is injected in the message so the user may re run their code
+	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Content:   fmt.Sprintf(of, <-o),
+		Reference: m.Reference(),
+		Components: []discordgo.MessageComponent{
+			discordgo.ActionsRow{
 				Components: []discordgo.MessageComponent{
-					discordgo.ActionsRow{
-						Components: []discordgo.MessageComponent{
-							discordgo.Button{
-								Label:    "Run",
-								Style:    discordgo.SuccessButton,
-								CustomID: "run",
-							},
-						},
+					discordgo.Button{
+						Label:    "Run",
+						Style:    discordgo.SuccessButton,
+						CustomID: "run",
 					},
 				},
-			})
-			return
-		}
-	}
+			},
+		},
+	})
+	return
 }
 
 // handler for re-executing go code when the "Run" button is clicked
@@ -106,21 +102,26 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.MessageComponentData().CustomID == "run" {
 		// get referenced channel message
 		// used to fetch the code from the message that contains it
-		msg, err := s.ChannelMessage(i.ChannelID, i.Message.MessageReference.MessageID)
+		m, err := s.ChannelMessage(i.ChannelID, i.Message.MessageReference.MessageID)
 		if err != nil {
 			log.Fatalf("Could not get message reference: %v", err)
 		}
 
-		// execute code
-		lang := getLanguage(msg.Content)
-		go exec(i.ChannelID, msg.Content, i.Message.Reference(), lang)
+		// extract code block from message and execute code
+		var responseContent string
+		if lang, codeBlock := codeBlockExtractor(m.Content); lang != "" || codeBlock != "" {
+			go exec(i.ChannelID, codeBlock, i.Message.Reference(), lang)
+			responseContent = fmt.Sprintf(of, <-o)
+		} else {
+			responseContent = fmt.Sprintf("Could not find any code in message to execute")
+		}
 
 		// send interaction respond
 		// update message reply with new code execution output
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseUpdateMessage,
 			Data: &discordgo.InteractionResponseData{
-				Content: fmt.Sprintf(of, <-o),
+				Content: responseContent,
 				Components: []discordgo.MessageComponent{
 					discordgo.ActionsRow{
 						Components: []discordgo.MessageComponent{
@@ -141,13 +142,6 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 // handle code execution
 // sends output to chan
 func exec(channelID string, messageContent string, messageReference *discordgo.MessageReference, lang string) {
-	// remove strings based on regex for proper code execution
-	rs := []string{".*```.*", "\n\n"}
-	for _, r := range rs {
-		regex := regexp.MustCompile(r)
-		messageContent = regex.ReplaceAllString(messageContent, "")
-	}
-
 	// execute code using piston library
 	output, err := client.Execute(lang, "",
 		[]piston.Code{
@@ -165,8 +159,32 @@ func exec(channelID string, messageContent string, messageReference *discordgo.M
 	o <- output.GetOutput()
 }
 
-// get coding language in message block
-func getLanguage(content string) string {
-	r, _ := regexp.Compile("run```.*")
-	return strings.TrimPrefix(string(r.Find([]byte(content))), t)
+func codeBlockExtractor(content string) (string, string) {
+	// check to see if we are executing go code
+	// this is based on a writing standard in discord for writing code in a paragraph message block
+	// example message: ```go ... ```
+	regx, _ := regexp.Compile(r)
+	c := strings.Split(content, "\n")
+	for bi, bb := range c {
+		// find beginning code block with "run" keyword
+		if regx.MatchString(bb) {
+			// get programming language to execute
+			r, _ := regexp.Compile("run```.*")
+			lang := strings.TrimPrefix(string(r.Find([]byte(content))), t)
+			// find end of code block
+			var codeBlock string
+			endBlockRegx, _ := regexp.Compile("```")
+			subArray := c[bi+1:]
+
+			for ei, eb := range subArray {
+				if endBlockRegx.Match([]byte(eb)) {
+					// create code block to execute
+					codeBlock = strings.Join(subArray[:ei], "\n")
+					return lang, codeBlock
+				}
+			}
+		}
+	}
+
+	return "", ""
 }
