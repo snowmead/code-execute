@@ -138,6 +138,8 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 }
 
+// handle code execution
+// sends output to chan
 func exec(channelID string, messageContent string, messageReference *discordgo.MessageReference, lang string) {
 	// remove strings based on regex for proper code execution
 	rs := []string{".*```.*", "\n\n"}
