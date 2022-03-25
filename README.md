@@ -16,7 +16,7 @@ It's important to note that the discord bot expects both keywords `run` and the 
 
 The discord bot will return a reply message with the output of the code and with a *Run* button that allows the user to execute their code as many times as they wish. This gives the user the possibility to modify their code and re-execute their code.
 
-![Alt Text](https://media.giphy.com/media/fUQj3S1Noe4efHAYxA/giphy.gif)
+![Alt Text](https://media.giphy.com/media/v5kxUwov8ajcKqeNee/giphy.gif)
 
 ## How to Run
 
