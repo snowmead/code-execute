@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	piston "github.com/milindmadhukar/go-piston"
@@ -17,6 +18,7 @@ import (
 var (
 	AppID    string = "955836104559460362"
 	botToken string
+	client   *piston.Client
 )
 
 var s *discordgo.Session
@@ -25,6 +27,7 @@ var s *discordgo.Session
 func init() {
 	botToken = os.Getenv("BOT_TOKEN")
 	flag.Parse()
+	client = piston.CreateDefaultClient()
 }
 
 // create discord session
@@ -39,7 +42,7 @@ func init() {
 func main() {
 	// add function handlers for code execution
 	s.AddHandler(executionHandler)
-	s.AddHandler(reExec)
+	s.AddHandler(reExecuctionHandler)
 
 	err := s.Open()
 	if err != nil {
@@ -54,37 +57,47 @@ func main() {
 }
 
 func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	start := time.Now()
 	c := strings.Split(m.Content, "\n")
 	// check to see if we are executing go code
 	// this is based on a writing standard in discord for writing code in a paragraph message block
 	// example message: ```go ... ```
 	for _, b := range c {
-		if matched, err := regexp.MatchString("run```go", b); err != nil {
-			fmt.Println("did not find any string matching")
+		if matched, err := regexp.MatchString("run```.*", b); err != nil {
+			fmt.Println("error matching string")
 		} else if matched {
-			codeOuput := goExec(m.ChannelID, m.Content, m.Reference())
+			r, _ := regexp.Compile("run```.*")
+			lang := strings.TrimPrefix(string(r.Find([]byte(b))), "run```")
+			codeOuput := goExec(m.ChannelID, m.Content, m.Reference(), lang)
 			sendMessageComplex(m.ChannelID, codeOuput, m.Reference())
 			return
 		}
 	}
+	fmt.Println(time.Since(start))
 }
 
 // handler for re-executing go code when the "Run" button is clicked
-func reExec(s *discordgo.Session, m *discordgo.InteractionCreate) {
+func reExecuctionHandler(s *discordgo.Session, m *discordgo.InteractionCreate) {
+	start := time.Now()
+
 	// check if go button was clicked
-	if m.MessageComponentData().CustomID == "go_run" {
+	if m.MessageComponentData().CustomID == "run" {
 		msg, err := s.ChannelMessage(m.ChannelID, m.Message.MessageReference.MessageID)
 		if err != nil {
 			log.Fatalf("Could not get message reference: %v", err)
 		}
-
 		messageReference := m.Message.Reference()
-		codeOutput := goExec(m.ChannelID, msg.Content, messageReference)
+
+		r, _ := regexp.Compile("run```.*")
+		lang := strings.TrimPrefix(string(r.Find([]byte(msg.Content))), "run```")
+		codeOutput := goExec(m.ChannelID, msg.Content, messageReference, lang)
 		editComplexMessage(m.Message.ID, m.ChannelID, codeOutput, messageReference)
 	}
+
+	fmt.Println(time.Since(start))
 }
 
-func goExec(channelID string, messageContent string, messageReference *discordgo.MessageReference) string {
+func goExec(channelID string, messageContent string, messageReference *discordgo.MessageReference, lang string) string {
 	// add regex string replacements for content
 	var r []regexp.Regexp
 	blockre := regexp.MustCompile(".*```.*")
@@ -97,11 +110,10 @@ func goExec(channelID string, messageContent string, messageReference *discordgo
 		content = regex.ReplaceAllString(content, "")
 	}
 
-	client := piston.CreateDefaultClient()
-	output, err := client.Execute("go", "",
+	output, err := client.Execute(lang, "",
 		[]piston.Code{
 			{
-				Name:    fmt.Sprintf("%s-code.go", messageReference.MessageID),
+				Name:    fmt.Sprintf("%s-code", messageReference.MessageID),
 				Content: content,
 			},
 		},
@@ -127,7 +139,7 @@ func sendMessageComplex(channelID string, codeOutput string, messageReference *d
 					discordgo.Button{
 						Label:    "Run",
 						Style:    discordgo.SuccessButton,
-						CustomID: "go_run",
+						CustomID: "run",
 					},
 				},
 			},
@@ -147,7 +159,7 @@ func editComplexMessage(messageID string, channelID string, codeOutput string, m
 					discordgo.Button{
 						Label:    "Run",
 						Style:    discordgo.SuccessButton,
-						CustomID: "go_run",
+						CustomID: "run",
 					},
 				},
 			},
