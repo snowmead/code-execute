@@ -73,13 +73,18 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	// extract code block from message and execute code
-	lang, codeBlock := codeBlockExtractor(m.Content)
-	go exec(m.ChannelID, codeBlock, m.Reference(), lang)
+	var responseContent string
+	if lang, codeBlock := codeBlockExtractor(m.Content); lang != "" || codeBlock != "" {
+		go exec(m.ChannelID, codeBlock, m.Reference(), lang)
+		responseContent = fmt.Sprintf(of, <-o)
+	} else {
+		responseContent = fmt.Sprintf("Could not find any code in message to execute")
+	}
 
 	// send initial reply message containing output of code execution
 	// "Run" button is injected in the message so the user may re run their code
 	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-		Content:   fmt.Sprintf(of, <-o),
+		Content:   responseContent,
 		Reference: m.Reference(),
 		Components: []discordgo.MessageComponent{
 			discordgo.ActionsRow{
