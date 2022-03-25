@@ -74,10 +74,27 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	c := strings.Split(m.Content, "\n")
 	for _, b := range c {
 		if regx.MatchString(b) {
-			r, _ := regexp.Compile(r)
-			lang := strings.TrimPrefix(string(r.Find([]byte(b))), t)
+			// execute code
+			lang := getLanguage(b)
 			go exec(m.ChannelID, m.Content, m.Reference(), lang)
-			sendMessageComplex(m.ChannelID, m.Reference())
+
+			// send initial reply message containing output of code execution
+			// "Run" button is injected in the message so the user may re run their code
+			_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+				Content:   fmt.Sprintf(of, <-o),
+				Reference: m.Reference(),
+				Components: []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "Run",
+								Style:    discordgo.SuccessButton,
+								CustomID: "run",
+							},
+						},
+					},
+				},
+			})
 			return
 		}
 	}
@@ -87,15 +104,19 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// check if go button was clicked
 	if i.MessageComponentData().CustomID == "run" {
+		// get referenced channel message
+		// used to fetch the code from the message that contains it
 		msg, err := s.ChannelMessage(i.ChannelID, i.Message.MessageReference.MessageID)
 		if err != nil {
 			log.Fatalf("Could not get message reference: %v", err)
 		}
 
-		r, _ := regexp.Compile("run```.*")
-		lang := strings.TrimPrefix(string(r.Find([]byte(msg.Content))), t)
+		// execute code
+		lang := getLanguage(msg.Content)
 		go exec(i.ChannelID, msg.Content, i.Message.Reference(), lang)
 
+		// send interaction respond
+		// update message reply with new code execution output
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseUpdateMessage,
 			Data: &discordgo.InteractionResponseData{
@@ -142,22 +163,8 @@ func exec(channelID string, messageContent string, messageReference *discordgo.M
 	o <- output.GetOutput()
 }
 
-// send initial reply message containing output of code execution
-// "Run" button is injected in the message so the user may re run their code
-func sendMessageComplex(channelID string, messageReference *discordgo.MessageReference) {
-	_, _ = s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
-		Content:   fmt.Sprintf(of, <-o),
-		Reference: messageReference,
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						Label:    "Run",
-						Style:    discordgo.SuccessButton,
-						CustomID: "run",
-					},
-				},
-			},
-		},
-	})
+// get coding language in message block
+func getLanguage(content string) string {
+	r, _ := regexp.Compile("run```.*")
+	return strings.TrimPrefix(string(r.Find([]byte(content))), t)
 }
