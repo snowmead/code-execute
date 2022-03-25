@@ -146,13 +146,13 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 // handle code execution
 // sends output to chan
-func exec(channelID string, messageContent string, messageReference *discordgo.MessageReference, lang string) {
+func exec(channelID string, code string, messageReference *discordgo.MessageReference, lang string) {
 	// execute code using piston library
 	output, err := client.Execute(lang, "",
 		[]piston.Code{
 			{
 				Name:    fmt.Sprintf("%s-code", messageReference.MessageID),
-				Content: messageContent,
+				Content: code,
 			},
 		},
 	)
