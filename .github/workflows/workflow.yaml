@@ -11,7 +11,7 @@ jobs:
     name: "Terraform GKE Cluster"
     runs-on: ubuntu-latest
     env:
-      working-directory: ./terraform/gke-cluster
+      directory: ./terraform/gke-cluster
     steps:
       # Checkout the repository to the GitHub Actions runner
     - name: Checkout
@@ -24,16 +24,19 @@ jobs:
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
       run: terraform init
+      working-directory: $directory
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
     # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
+      working-directory: $directory
       run: terraform fmt -check
 
     # Generates an execution plan for Terraform
     - name: Terraform Plan
       run: terraform plan
+      working-directory: $directory
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
@@ -42,5 +45,6 @@ jobs:
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: terraform apply -auto-approve
+      working-directory: $directory
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
