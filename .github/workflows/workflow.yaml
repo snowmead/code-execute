@@ -15,6 +15,10 @@ jobs:
       helm_release_changes: ${{ steps.changes_terraform_helm_release.outputs.src }}
     runs-on: ubuntu-latest
     steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - uses: dorny/paths-filter@v2
         id: changes_docker
         with:
@@ -43,6 +47,10 @@ jobs:
     if: needs.check_changes.outputs.docker_changes == 'true'
     runs-on: ubuntu-latest
     steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v2
+        
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
