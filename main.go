@@ -159,7 +159,7 @@ func exec(channelID string, code string, messageReference *discordgo.MessageRefe
 		_, _ = s.ChannelMessageSendReply(channelID, err.Error(), messageReference)
 	}
 
-	o <- fmt.Sprintf("[%s - %s] Output:\n```\n%s\n```\n", lang, output.Version, output.GetOutput())
+	o <- fmt.Sprintf(">>> Output [%s - %s]\n```\n%s\n```\n", output.Language, output.Version, output.GetOutput())
 }
 
 func codeBlockExtractor(content string) (string, string) {
