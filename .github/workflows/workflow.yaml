@@ -69,7 +69,7 @@ jobs:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
   terraform-helm-release:
-    needs: terraform-gke-cluster
+    needs: ["docker", "terraform-gke-cluster"]
     name: "Terraform Helm Release"
     runs-on: ubuntu-latest
     steps:
