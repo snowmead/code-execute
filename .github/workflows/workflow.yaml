@@ -7,7 +7,40 @@ on:
   pull_request:
 
 jobs:
+  check_changes:
+    name: Check files
+    outputs:
+      docker_changes: ${{ steps.changes_docker.outputs.src }}
+      gke_cluster_changes: ${{ steps.changes_terraform_gke_cluster.outputs.src }}
+      helm_release_changes: ${{ steps.changes_terraform_helm_release.outputs.src }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: changes_docker
+        with:
+          filters: |
+            src:
+              - '*.go'
+              - 'go.mod'
+              - 'Dockerfile'
+
+      - uses: dorny/paths-filter@v2
+        id: changes_terraform_gke_cluster
+        with:
+          filters: |
+            src:
+              - './terraform/gke-cluster/**'
+      
+      - uses: dorny/paths-filter@v2
+        id: changes_terraform_helm_release
+        with:
+          filters: |
+            src:
+              - './terraform/helm-release/**'
+
   docker:
+    needs: check_changes
+    if: needs.check_changes.outputs.docker_changes == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Set up QEMU
@@ -28,7 +61,9 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/codeexecute:latest
 
-  terraform-gke-cluster:
+  terraform_gke_cluster:
+    needs: check_changes
+    if: needs.check_changes.outputs.gke_cluster_changes == 'true'
     name: "Terraform GKE Cluster"
     runs-on: ubuntu-latest
     steps:
@@ -68,8 +103,9 @@ jobs:
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-  terraform-helm-release:
-    needs: ["docker", "terraform-gke-cluster"]
+  terraform_helm_release:
+    needs: ["check_changes", "docker", "terraform_gke_cluster"]
+    if: needs.check_changes.outputs.docker_changes == 'true' || needs.check_changes.outputs.gke_cluster_changes == 'true' || needs.check_changes.outputs.helm_release_changes == 'true'
     name: "Terraform Helm Release"
     runs-on: ubuntu-latest
     steps:
