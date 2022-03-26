@@ -1,5 +1,5 @@
 docker-build:
-	docker build -t codeexecute:1.0.0 .
+	docker build -t codeexecute:1.0.2 .
 
 helm-install:
 	helm upgrade --install chart chart

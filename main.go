@@ -49,6 +49,7 @@ func init() {
 
 func main() {
 	// add function handlers for code execution
+	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) { log.Println("Bot is up!") })
 	s.AddHandler(executionHandler)
 	s.AddHandler(reExecuctionHandler)
 

@@ -1,19 +1,20 @@
 data "terraform_remote_state" "gke" {
-  backend = "remote"
+  backend = "gcs"
   config = {
-    bucket = "codeexecute-terraform-state"
+    bucket = "ce-terraform-state-gke"
     prefix = "terraform/state"
   }
 }
 
 # Retrieve GKE cluster configuration
 data "google_container_cluster" "cluster" {
-  name = data.terraform_remote_state.gke.outputs.kubernetes_cluster_name
+  name     = data.terraform_remote_state.gke.outputs.kubernetes_cluster_name
+  location = data.terraform_remote_state.gke.outputs.kubernetes_cluster_location
 }
 
 module "gke_auth" {
   source       = "terraform-google-modules/kubernetes-engine/google//modules/auth"
-  project_id   = var.project_id
-  location     = google_container_cluster.cluster.region
-  cluster_name = google_container_cluster.cluster.name
+  project_id   = data.terraform_remote_state.gke.outputs.project_id
+  location     = data.google_container_cluster.cluster.location
+  cluster_name = data.google_container_cluster.cluster.name
 }
