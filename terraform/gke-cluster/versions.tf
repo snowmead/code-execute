@@ -6,10 +6,15 @@ terraform {
     }
   }
 
+  backend "gcs" {
+    bucket = "ce-terraform-state-gke"
+    prefix = "terraform/state"
+  }
+
   required_version = ">= 0.14"
 }
 
 provider "google" {
-  project     = var.project_id
-  region      = var.region
+  project = var.project_id
+  region  = var.region
 }
