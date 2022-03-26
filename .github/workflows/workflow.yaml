@@ -30,13 +30,13 @@ jobs:
 
     # Checks that all Terraform configuration files adhere to a canonical format
     - name: Terraform Format
-      working-directory: "$WDIR"
+      working-directory: ./terraform/gke-cluster
       run: terraform fmt -check
 
     # Generates an execution plan for Terraform
     - name: Terraform Plan
       run: terraform plan
-      working-directory: "$WDIR"
+      working-directory: ./terraform/gke-cluster
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
@@ -45,6 +45,6 @@ jobs:
     - name: Terraform Apply
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: terraform apply -auto-approve
-      working-directory: "$WDIR"
+      working-directory: ./terraform/gke-cluster
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
