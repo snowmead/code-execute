@@ -15,7 +15,6 @@ import (
 
 // bot parameters
 var (
-	AppID    string = "955836104559460362"
 	botToken string
 	client   *piston.Client
 )
@@ -107,7 +106,7 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		// used to fetch the code from the message that contains it
 		m, err := s.ChannelMessage(i.ChannelID, i.Message.MessageReference.MessageID)
 		if err != nil {
-			log.Fatalf("Could not get message reference: %v", err)
+			log.Printf("Could not get message reference: %v", err)
 		}
 
 		// extract code block from message and execute code
@@ -121,7 +120,7 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		// send interaction respond
 		// update message reply with new code execution output
-		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseUpdateMessage,
 			Data: &discordgo.InteractionResponseData{
 				Content: responseContent,
@@ -138,8 +137,11 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				},
 			},
 		})
-	}
 
+		if err != nil {
+			log.Printf("Could not send respond interaction: %v", err)
+		}
+	}
 }
 
 // handle code execution

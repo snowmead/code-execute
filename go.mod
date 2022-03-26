@@ -2,7 +2,10 @@ module codeexecute
 
 go 1.18
 
-require github.com/bwmarrin/discordgo v0.24.0
+require (
+	github.com/bwmarrin/discordgo v0.24.0
+	github.com/milindmadhukar/go-piston v0.0.0-20211122120254-64da61081d05
+)
 
 require (
 	github.com/gorilla/websocket v1.4.2 // indirect
