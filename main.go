@@ -97,7 +97,6 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 			},
 		},
 	})
-	return
 }
 
 // handler for re-executing go code when the "Run" button is clicked
@@ -117,7 +116,7 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			go exec(i.ChannelID, codeBlock, i.Message.Reference(), lang)
 			responseContent = <-o
 		} else {
-			responseContent = fmt.Sprintf("Could not find any code in message to execute")
+			responseContent = fmt.Sprintln("Could not find any code in message to execute")
 		}
 
 		// send interaction respond
