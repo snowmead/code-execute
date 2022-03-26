@@ -25,8 +25,6 @@ var s *discordgo.Session
 // code execution ouptput
 var o chan string
 
-const of string = "Output:\n```\n%s\n```\n"
-
 // regex for parsing message to execute code
 const r string = "run```.*"
 
@@ -76,9 +74,9 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	var responseContent string
 	if lang, codeBlock := codeBlockExtractor(m.Content); lang != "" || codeBlock != "" {
 		go exec(m.ChannelID, codeBlock, m.Reference(), lang)
-		responseContent = fmt.Sprintf(of, <-o)
+		responseContent = <-o
 	} else {
-		responseContent = fmt.Sprintf("Could not find any code in message to execute")
+		return
 	}
 
 	// send initial reply message containing output of code execution
@@ -116,7 +114,7 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		var responseContent string
 		if lang, codeBlock := codeBlockExtractor(m.Content); lang != "" || codeBlock != "" {
 			go exec(i.ChannelID, codeBlock, i.Message.Reference(), lang)
-			responseContent = fmt.Sprintf(of, <-o)
+			responseContent = <-o
 		} else {
 			responseContent = fmt.Sprintf("Could not find any code in message to execute")
 		}
@@ -161,7 +159,7 @@ func exec(channelID string, code string, messageReference *discordgo.MessageRefe
 		_, _ = s.ChannelMessageSendReply(channelID, err.Error(), messageReference)
 	}
 
-	o <- output.GetOutput()
+	o <- fmt.Sprintf("[%s - %s] Output:\n```\n%s\n```\n", lang, output.Version, output.GetOutput())
 }
 
 func codeBlockExtractor(content string) (string, string) {
