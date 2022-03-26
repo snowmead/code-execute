@@ -19,7 +19,7 @@ terraform {
     prefix = "terraform/state"
   }
 
-  required_version = "~> 0.14"
+  required_version = ">= 1.1.7"
 }
 
 provider "google" {
