@@ -1,0 +1,67 @@
+name: "GKE Cluster"
+
+on:
+  push:
+    branches:
+    - 'main'
+
+jobs:
+  check_changes:
+    name: Check files
+    outputs:
+      docker_changes: ${{ steps.changes_docker.outputs.src }}
+      gke_cluster_changes: ${{ steps.changes_terraform_gke_cluster.outputs.src }}
+      helm_release_changes: ${{ steps.changes_terraform_helm_release.outputs.src }}
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: dorny/paths-filter@v2
+        id: changes_terraform_gke_cluster
+        with:
+          filters: |
+            src:
+              - './terraform/gke-cluster/**'
+
+  terraform_gke_cluster:
+    needs: check_changes
+    if: needs.check_changes.outputs.gke_cluster_changes == 'true'
+    name: "Terraform GKE Cluster"
+    runs-on: ubuntu-latest
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+
+    # Checks that all Terraform configuration files adhere to a canonical format
+    - name: Terraform Format
+      working-directory: ./terraform/gke-cluster
+      run: terraform fmt -check
+
+    # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
+    - name: Terraform Init
+      run: terraform init
+      working-directory: ./terraform/gke-cluster
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+    # Generates an execution plan for Terraform
+    - name: Terraform Plan
+      run: terraform plan
+      working-directory: ./terraform/gke-cluster
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+    # On push to main, build or change infrastructure according to Terraform configuration files
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply -auto-approve
+      working-directory: ./terraform/gke-cluster
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
