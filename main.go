@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -10,30 +11,37 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/google/go-github/v43/github"
 	piston "github.com/milindmadhukar/go-piston"
 )
+
+var s *discordgo.Session
+var gclient *github.Client
+var ctx context.Context
 
 // bot parameters
 var (
 	botToken string
-	client   *piston.Client
+	pclient  *piston.Client
 )
-
-var s *discordgo.Session
 
 // code execution ouptput
 var o chan string
 
-// regex for parsing message to execute code
-const r string = "run```.*"
-
-// used to trim to obtain language form message
-const t string = "run```"
+// code block regex
+const (
+	// regex for parsing message to execute code
+	r string = "run```.*"
+	// used to trim to obtain language form message
+	t string = "run```"
+)
 
 func init() {
 	botToken = os.Getenv("BOT_TOKEN")
 	flag.Parse()
-	client = piston.CreateDefaultClient()
+	pclient = piston.CreateDefaultClient()
+	ctx = context.Background()
+	gclient = github.NewClient(nil)
 	o = make(chan string)
 }
 
@@ -70,6 +78,10 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	//var gistID string
+	gist, _, _ := gclient.Gists.Get(ctx, "29a8eb718842c1cb91718e91b53fe200")
+
+	fmt.Printf("%s\n", *gist.Files["helloworld.go"].Content)
 	// extract code block from message and execute code
 	var responseContent string
 	if lang, codeBlock := codeBlockExtractor(m.Content); lang != "" || codeBlock != "" {
@@ -148,7 +160,7 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 // sends output to chan
 func exec(channelID string, code string, messageReference *discordgo.MessageReference, lang string) {
 	// execute code using piston library
-	output, err := client.Execute(lang, "",
+	output, err := pclient.Execute(lang, "",
 		[]piston.Code{
 			{
 				Name:    fmt.Sprintf("%s-code", messageReference.MessageID),
