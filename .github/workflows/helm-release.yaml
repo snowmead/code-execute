@@ -42,7 +42,6 @@ jobs:
       uses: jimschubert/query-tag-action@v1
       with:
         include: 'v*'
-        commit-ish: 'HEAD~'
 
     - name: Test
       run: echo $RELEASE_VERSION
