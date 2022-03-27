@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -10,30 +11,29 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/google/go-github/v43/github"
 	piston "github.com/milindmadhukar/go-piston"
 )
+
+var s *discordgo.Session
+var gclient *github.Client
+var ctx context.Context
 
 // bot parameters
 var (
 	botToken string
-	client   *piston.Client
+	pclient  *piston.Client
 )
-
-var s *discordgo.Session
 
 // code execution ouptput
 var o chan string
 
-// regex for parsing message to execute code
-const r string = "run```.*"
-
-// used to trim to obtain language form message
-const t string = "run```"
-
 func init() {
 	botToken = os.Getenv("BOT_TOKEN")
 	flag.Parse()
-	client = piston.CreateDefaultClient()
+	pclient = piston.CreateDefaultClient()
+	ctx = context.Background()
+	gclient = github.NewClient(nil)
 	o = make(chan string)
 }
 
@@ -148,7 +148,7 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 // sends output to chan
 func exec(channelID string, code string, messageReference *discordgo.MessageReference, lang string) {
 	// execute code using piston library
-	output, err := client.Execute(lang, "",
+	output, err := pclient.Execute(lang, "",
 		[]piston.Code{
 			{
 				Name:    fmt.Sprintf("%s-code", messageReference.MessageID),
@@ -165,17 +165,24 @@ func exec(channelID string, code string, messageReference *discordgo.MessageRefe
 }
 
 func codeBlockExtractor(content string) (string, string) {
-	// check to see if we are executing go code
+	// check to see if we are executing a code block
 	// this is based on a writing standard in discord for writing code in a paragraph message block
 	// example message: ```go ... ```
-	regx, _ := regexp.Compile(r)
+	rcb, _ := regexp.Compile("run```.*")
+	rg, _ := regexp.Compile("run https://gist.github.com/.*/.*")
+	rgist, _ := regexp.Compile("run https://gist.github.com/.*/")
 	c := strings.Split(content, "\n")
 	for bi, bb := range c {
-		// find beginning code block with "run" keyword
-		if regx.MatchString(bb) {
-			// get programming language to execute
-			r, _ := regexp.Compile("run```.*")
-			lang := strings.TrimPrefix(string(r.Find([]byte(content))), t)
+		// extract gist language and code to execute
+		if rg.MatchString(bb) {
+			gistID := rgist.ReplaceAllString(bb, "")
+			gist, _, _ := gclient.Gists.Get(ctx, gistID)
+			return strings.ToLower(*gist.Files["helloworld.go"].Language), *gist.Files["helloworld.go"].Content
+		}
+
+		// extract code block to execute
+		if rcb.MatchString(bb) {
+			lang := strings.TrimPrefix(string(rcb.Find([]byte(content))), "run```")
 			// find end of code block
 			var codeBlock string
 			endBlockRegx, _ := regexp.Compile("```")

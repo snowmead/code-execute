@@ -1,0 +1,83 @@
+name: "Helm Release"
+
+on:
+  push:
+    branches:
+    - 'main'
+  workflow_run:
+    workflows: ["Docker"]
+    types:
+      - completed
+
+jobs:
+  check_changes:
+    name: Check files
+    outputs:
+      helm_release_changes: ${{ steps.changes_terraform_helm_release.outputs.src }}
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: dorny/paths-filter@v2
+        id: changes_terraform_helm_release
+        with:
+          filters: |
+            src:
+              - './terraform/helm-release/**'
+
+  terraform_helm_release:
+    needs: check_changes
+    if: ${{ github.event_name == 'workflow_run' || needs.check_changes.outputs.helm_release_changes == 'true' }}
+    name: "Terraform Helm Release"
+    runs-on: ubuntu-latest
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Find Tag
+      id: tagger
+      uses: jimschubert/query-tag-action@v1
+      with:
+        include: 'v*'
+        commit-ish: 'HEAD~'
+
+    - name: Test
+      run: echo $RELEASE_VERSION
+
+    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+
+    # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
+    - name: Terraform Init
+      run: terraform init
+      working-directory: ./terraform/helm-release
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+    # Checks that all Terraform configuration files adhere to a canonical format
+    - name: Terraform Format
+      working-directory: ./terraform/helm-release
+      run: terraform fmt -check
+
+    # Generates an execution plan for Terraform
+    - name: Terraform Plan
+      run: terraform plan
+      working-directory: ./terraform/helm-release
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        TF_VAR_bot_token: ${{ secrets.BOT_TOKEN }}
+        TF_VAR_image_tag: ${{steps.tagger.outputs.tag}}
+
+    # On push to main, build or change infrastructure according to Terraform configuration files
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main'
+      run: terraform apply -auto-approve
+      working-directory: ./terraform/helm-release
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        TF_VAR_bot_token: ${{ secrets.BOT_TOKEN }}
+        TF_VAR_image_tag: ${{steps.tagger.outputs.tag}}
