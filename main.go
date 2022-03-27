@@ -28,14 +28,6 @@ var (
 // code execution ouptput
 var o chan string
 
-// code block regex
-const (
-	// regex for parsing message to execute code
-	r string = "run```.*"
-	// used to trim to obtain language form message
-	t string = "run```"
-)
-
 func init() {
 	botToken = os.Getenv("BOT_TOKEN")
 	flag.Parse()
@@ -78,10 +70,6 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	//var gistID string
-	gist, _, _ := gclient.Gists.Get(ctx, "29a8eb718842c1cb91718e91b53fe200")
-
-	fmt.Printf("%s\n", *gist.Files["helloworld.go"].Content)
 	// extract code block from message and execute code
 	var responseContent string
 	if lang, codeBlock := codeBlockExtractor(m.Content); lang != "" || codeBlock != "" {
@@ -177,17 +165,24 @@ func exec(channelID string, code string, messageReference *discordgo.MessageRefe
 }
 
 func codeBlockExtractor(content string) (string, string) {
-	// check to see if we are executing go code
+	// check to see if we are executing a code block
 	// this is based on a writing standard in discord for writing code in a paragraph message block
 	// example message: ```go ... ```
-	regx, _ := regexp.Compile(r)
+	rcb, _ := regexp.Compile("run```.*")
+	rg, _ := regexp.Compile("run https://gist.github.com/.*/.*")
+	rgist, _ := regexp.Compile("run https://gist.github.com/.*/")
 	c := strings.Split(content, "\n")
 	for bi, bb := range c {
-		// find beginning code block with "run" keyword
-		if regx.MatchString(bb) {
-			// get programming language to execute
-			r, _ := regexp.Compile("run```.*")
-			lang := strings.TrimPrefix(string(r.Find([]byte(content))), t)
+		// extract gist language and code to execute
+		if rg.MatchString(bb) {
+			gistID := rgist.ReplaceAllString(bb, "")
+			gist, _, _ := gclient.Gists.Get(ctx, gistID)
+			return strings.ToLower(*gist.Files["helloworld.go"].Language), *gist.Files["helloworld.go"].Content
+		}
+
+		// extract code block to execute
+		if rcb.MatchString(bb) {
+			lang := strings.TrimPrefix(string(rcb.Find([]byte(content))), "run```")
 			// find end of code block
 			var codeBlock string
 			endBlockRegx, _ := regexp.Compile("```")
