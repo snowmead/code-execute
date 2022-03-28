@@ -4,9 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -23,6 +26,12 @@ var ctx context.Context
 var (
 	botToken string
 	pclient  *piston.Client
+)
+
+const (
+	cblock int = iota
+	cgist
+	cfile
 )
 
 // code execution ouptput
@@ -72,29 +81,35 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// extract code block from message and execute code
 	var responseContent string
-	if lang, codeBlock := codeBlockExtractor(m.Content); lang != "" || codeBlock != "" {
+	ctype, lang, codeBlock := codeBlockExtractor(m.Message)
+	if lang != "" || codeBlock != "" {
 		go exec(m.ChannelID, codeBlock, m.Reference(), lang)
 		responseContent = <-o
 	} else {
 		return
 	}
 
-	// send initial reply message containing output of code execution
-	// "Run" button is injected in the message so the user may re run their code
-	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-		Content:   responseContent,
-		Reference: m.Reference(),
-		Components: []discordgo.MessageComponent{
-			discordgo.ActionsRow{
-				Components: []discordgo.MessageComponent{
-					discordgo.Button{
-						Label:    "Run",
-						Style:    discordgo.SuccessButton,
-						CustomID: "run",
-					},
+	// only add run button for code block and gist execution
+	var runButton []discordgo.MessageComponent
+	if ctype != cfile {
+		runButton = []discordgo.MessageComponent{discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				discordgo.Button{
+					Label:    "Run",
+					Style:    discordgo.SuccessButton,
+					CustomID: "run",
 				},
 			},
 		},
+		}
+	}
+
+	// send initial reply message containing output of code execution
+	// "Run" button is injected in the message so the user may re run their code
+	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Content:    responseContent,
+		Reference:  m.Reference(),
+		Components: runButton,
 	})
 }
 
@@ -111,7 +126,7 @@ func reExecuctionHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 		// extract code block from message and execute code
 		var responseContent string
-		if lang, codeBlock := codeBlockExtractor(m.Content); lang != "" || codeBlock != "" {
+		if _, lang, codeBlock := codeBlockExtractor(m); lang != "" || codeBlock != "" {
 			go exec(i.ChannelID, codeBlock, i.Message.Reference(), lang)
 			responseContent = <-o
 		} else {
@@ -157,46 +172,72 @@ func exec(channelID string, code string, messageReference *discordgo.MessageRefe
 		},
 	)
 	if err != nil {
-		fmt.Println(err.Error())
-		_, _ = s.ChannelMessageSendReply(channelID, err.Error(), messageReference)
+		o <- fmt.Sprintf(">>> Execution Failed [%s - %s]\n```\n%s\n```\n", output.Language, output.Version, err)
 	}
 
 	o <- fmt.Sprintf(">>> Output [%s - %s]\n```\n%s\n```\n", output.Language, output.Version, output.GetOutput())
 }
 
-func codeBlockExtractor(content string) (string, string) {
-	// check to see if we are executing a code block
+func codeBlockExtractor(m *discordgo.Message) (int, string, string) {
+	mc := m.Content
+	// syntax for executing a code block
 	// this is based on a writing standard in discord for writing code in a paragraph message block
 	// example message: ```go ... ```
 	rcb, _ := regexp.Compile("run```.*")
+	// syntax for executing a gist
 	rg, _ := regexp.Compile("run https://gist.github.com/.*/.*")
 	rgist, _ := regexp.Compile("run https://gist.github.com/.*/")
-	c := strings.Split(content, "\n")
-	for bi, bb := range c {
-		// extract gist language and code to execute
-		if rg.MatchString(bb) {
-			gistID := rgist.ReplaceAllString(bb, "")
-			gist, _, _ := gclient.Gists.Get(ctx, gistID)
-			return strings.ToLower(*gist.Files["helloworld.go"].Language), *gist.Files["helloworld.go"].Content
-		}
+	// syntax for executing an attached file
+	rf, _ := regexp.Compile("run *.*")
 
+	c := strings.Split(mc, "\n")
+	for bi, bb := range c {
 		// extract code block to execute
 		if rcb.MatchString(bb) {
-			lang := strings.TrimPrefix(string(rcb.Find([]byte(content))), "run```")
+			lang := strings.TrimPrefix(string(rcb.Find([]byte(mc))), "run```")
 			// find end of code block
 			var codeBlock string
 			endBlockRegx, _ := regexp.Compile("```")
-			subArray := c[bi+1:]
 
-			for ei, eb := range subArray {
+			sa := c[bi+1:]
+			for ei, eb := range sa {
 				if endBlockRegx.Match([]byte(eb)) {
 					// create code block to execute
-					codeBlock = strings.Join(subArray[:ei], "\n")
-					return lang, codeBlock
+					codeBlock = strings.Join(sa[:ei], "\n")
+					return cblock, lang, codeBlock
 				}
+			}
+		}
+		// extract gist language and code to execute
+		if rg.MatchString(bb) {
+			gistID := rgist.ReplaceAllString(bb, "")
+			gist, _, err := gclient.Gists.Get(ctx, gistID)
+			if err != nil {
+				log.Printf("Failed to obtain gist: %v\n", err)
+			}
+			return cgist, strings.ToLower(*gist.Files["helloworld.go"].Language), *gist.Files["helloworld.go"].Content
+		}
+		// extract file language and code to execute
+		if rf.MatchString(bb) {
+			if len(m.Attachments) > 0 {
+				// handle 1 file in message attachments
+				f := m.Attachments[0]
+				// get language from extension
+				lang := strings.TrimLeft(filepath.Ext(f.Filename), ".")
+				// get code from file
+				resp, err := http.Get(f.URL)
+				if err != nil {
+					log.Printf("Failed GET http call to file attachment URL: %v\n", err)
+				}
+				defer resp.Body.Close()
+				codeBlock, err := io.ReadAll(resp.Body)
+				if err != nil {
+					log.Printf("Failed to obtain code from response body: %v\n", err)
+				}
+				return cfile, lang, string(codeBlock)
 			}
 		}
 	}
 
-	return "", ""
+	return -1, "", ""
 }
