@@ -6,6 +6,7 @@ CodeExecute is a discord bot that enables developer collaboration through discor
 
 # How to use
 ## Syntax
+- Basic code block execution syntax
 ````
 run```[language]
 <your code>
@@ -23,7 +24,14 @@ func main() {
 ```
 Thanks in advance!
 ````
-
+- Execute a github gist
+```
+run https://gist.github.com/michaelassaf/29a8eb718842c1cb91718e91b53fe200
+```
+- Execute a file attached to your message
+```
+run file
+```
 - The discord bot will return a reply message with the output of the code and with a *Run* button that allows the user to execute their code as many times as they wish. This gives the user the possibility to modify their code and re-execute their code.
 
 ![Alt Text](https://media.giphy.com/media/v5kxUwov8ajcKqeNee/giphy.gif)
