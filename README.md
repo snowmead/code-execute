@@ -6,13 +6,13 @@ CodeExecute is a discord bot that enables developer collaboration through discor
 
 # How to use
 ## Syntax
-- Basic code block execution syntax
+###### Basic code block execution syntax
 ````
 run```[language]
 <your code>
 ```
 ````
-- The bot also supports messages with text before and after your code block.
+###### The bot also supports messages with text before and after your code block.
 ````java
 Hello! Can anyone help me with this code
 run```go
@@ -24,11 +24,11 @@ func main() {
 ```
 Thanks in advance!
 ````
-- Execute a github gist
+###### Execute a github gist
 ```
 run https://gist.github.com/michaelassaf/29a8eb718842c1cb91718e91b53fe200
 ```
-- Execute a file attached to your message
+###### Execute a file attached to your message
 ```
 run file
 ```
