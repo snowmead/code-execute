@@ -4,11 +4,13 @@ on:
   push:
     tags:
     - 'v*.*.*'
+    branches:
+    - 'main'
   pull_request:
     types: [opened, reopened, synchronize]
 
 env:
-  RELEASE_VERSION: "temp"
+  RELEASE_VERSION: "latest"
 
 jobs:
   docker:
