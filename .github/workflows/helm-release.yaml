@@ -8,6 +8,8 @@ on:
     workflows: ["Docker"]
     types:
       - completed
+  pull_request:
+    types: [opened, reopened, synchronize]
 
 jobs:
   check_changes:
