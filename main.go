@@ -28,6 +28,7 @@ var (
 	pclient  *piston.Client
 )
 
+// code execution types
 const (
 	cblock int = iota
 	cgist
