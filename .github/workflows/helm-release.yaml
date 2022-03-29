@@ -8,6 +8,8 @@ on:
     workflows: ["Docker"]
     types:
       - completed
+  pull_request:
+    types: [opened, reopened, synchronize]
 
 jobs:
   check_changes:
@@ -71,7 +73,7 @@ jobs:
 
     # On push to main, build or change infrastructure according to Terraform configuration files
     - name: Terraform Apply
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' && ${{ github.event_name != 'pull_request' }}
       run: terraform apply -auto-approve
       working-directory: ./terraform/helm-release
       env:
