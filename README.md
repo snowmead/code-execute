@@ -1,3 +1,12 @@
+<div align="center">
+    <a href="https://github.com/michaelassaf/code-execute/actions">
+    <img alt="build status" src="https://img.shields.io/github/workflow/status/michaelassaf/code-execute/Docker?branch=main&style=for-the-badge&logo=github&label=build" height="20"/>
+  </a>
+    <a href="https://discord.gg/6YY8BFBQ">
+    <img alt="Discord" src="https://img.shields.io/discord/593655374469660673.svg?style=for-the-badge&label=Discord&logo=discord" height="20"/>
+  </a>
+</div>
+
 # CodeExecute
 
 CodeExecute is a discord bot that enables developer collaboration through discord messages. It will allow developers to interactively execute code through discord messages while sharing and previewing the output of the code execution.
