@@ -5,10 +5,6 @@
     <a href="https://discord.gg/6YY8BFBQ">
     <img alt="Discord" src="https://img.shields.io/discord/593655374469660673.svg?style=for-the-badge&label=Discord&logo=discord" height="20"/>
   </a>
-  </a>
-    <a href="https://www.codeexecute.dev/">
-    <img alt="Github Pages" src="https://img.shields.io/discord/593655374469660673.svg?style=for-the-badge&label=Pages&logo=github" height="20"/>
-  </a>
 </div>
 
 # CodeExecute
