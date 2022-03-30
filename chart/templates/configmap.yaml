@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: discord-config
-data:
-  app: "955836104559460362"

@@ -40,13 +40,6 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
-          - name: SPECIAL_LEVEL_KEY
-            valueFrom:
-              configMapKeyRef:
-                # The ConfigMap containing the value you want to assign to SPECIAL_LEVEL_KEY
-                name: discord-config
-                # Specify the key associated with the value
-                key: app
           - name: BOT_TOKEN
             valueFrom:
               secretKeyRef:
