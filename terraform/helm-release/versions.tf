@@ -15,7 +15,7 @@ terraform {
   }
 
   backend "gcs" {
-    bucket = "ce-terraform-state-helm"
+    bucket = "codeexecute-terraform-state-helm"
     prefix = "terraform/state"
   }
 

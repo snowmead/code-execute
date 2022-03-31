@@ -7,7 +7,7 @@ terraform {
   }
 
   backend "gcs" {
-    bucket = "ce-terraform-state-gke"
+    bucket = "codeexecute-terraform-state-gke"
     prefix = "terraform/state"
   }
 

@@ -8,26 +8,7 @@ on:
     types: [opened, reopened, synchronize]
 
 jobs:
-  check_changes:
-    name: Check files
-    outputs:
-      gke_cluster_changes: ${{ steps.changes_terraform_gke_cluster.outputs.src }}
-    runs-on: ubuntu-latest
-    steps:
-      # Checkout the repository to the GitHub Actions runner
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - uses: dorny/paths-filter@v2
-        id: changes_terraform_gke_cluster
-        with:
-          filters: |
-            src:
-              - './terraform/gke-cluster/**'
-
   terraform_gke_cluster:
-    needs: check_changes
-    if: needs.check_changes.outputs.gke_cluster_changes == 'true'
     name: "Terraform GKE Cluster"
     runs-on: ubuntu-latest
     steps:
@@ -60,7 +41,7 @@ jobs:
 
     # On push to main, build or change infrastructure according to Terraform configuration files
     - name: Terraform Apply
-      if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && github.event_name != 'pull_request' }}
+      if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
       run: terraform apply -auto-approve
       working-directory: ./terraform/gke-cluster
       env:
