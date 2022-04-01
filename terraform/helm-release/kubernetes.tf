@@ -1,7 +1,7 @@
 data "terraform_remote_state" "gke" {
   backend = "gcs"
   config = {
-    bucket = "ce-terraform-state-gke"
+    bucket = "codeexecute-terraform-state-gke"
     prefix = "terraform/state"
   }
 }
