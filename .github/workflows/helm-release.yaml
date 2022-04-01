@@ -12,26 +12,7 @@ on:
     types: [opened, reopened, synchronize]
 
 jobs:
-  check_changes:
-    name: Check files
-    outputs:
-      helm_release_changes: ${{ steps.changes_terraform_helm_release.outputs.src }}
-    runs-on: ubuntu-latest
-    steps:
-      # Checkout the repository to the GitHub Actions runner
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - uses: dorny/paths-filter@v2
-        id: changes_terraform_helm_release
-        with:
-          filters: |
-            src:
-              - './terraform/helm-release/**'
-
   terraform_helm_release:
-    needs: check_changes
-    if: ${{ github.event_name == 'workflow_run' || needs.check_changes.outputs.helm_release_changes == 'true' }}
     name: "Terraform Helm Release"
     runs-on: ubuntu-latest
     steps:
