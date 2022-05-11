@@ -83,7 +83,7 @@ func executionHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// extract code block from message and execute code
 	var responseContent string
 	ctype, lang, codeBlock := codeBlockExtractor(m.Message)
-	if lang != "" || codeBlock != "" {
+	if lang != "" && codeBlock != "" {
 		go exec(m.ChannelID, codeBlock, m.Reference(), lang)
 		responseContent = <-o
 	} else {
