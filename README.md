@@ -13,6 +13,13 @@ CodeExecute is a discord bot that enables developer collaboration through discor
 
 :point_right: You can add this bot to your server [here](https://discord.com/api/oauth2/authorize?client_id=955836104559460362&permissions=534723950656&scope=bot%20applications.commands)
 
+# Based on Piston
+This bot executes code using the [Piston](https://github.com/engineer-man/piston) library which includes sandboxing and added security.
+You can read up on their level of security, supported languages and more:
+- [Supported Languages](https://github.com/engineer-man/piston#supported-languages)
+- [Principle of Operation](https://github.com/engineer-man/piston#principle-of-operation)
+- [Security](https://github.com/engineer-man/piston#security)
+
 # How to use
 ## Syntax
 ###### Basic code block execution syntax
