@@ -14,7 +14,7 @@ CodeExecute is a discord bot that enables developer collaboration through discor
 
 :point_right: You can add this bot to your server [here](https://discord.com/api/oauth2/authorize?client_id=955836104559460362&permissions=534723950656&scope=bot%20applications.commands)
 
-You can also donate to help me run this awesome bot 
+:pray: You can also donate to help me run this awesome bot 
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/paypalme/my/profile)
 
